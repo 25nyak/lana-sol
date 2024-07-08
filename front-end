@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>DeFi Farming on Solana</title>
+    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@project-serum/anchor@latest/dist/browser/anchor.min.js"></script>
+</head>
+<body>
+    <h1>DeFi Farming on Solana</h1>
+    <p>Stake USDC and earn 10% daily ROI</p>
+    <div>
+        <input type="number" id="stakeAmount" placeholder="Amount to stake">
+        <button onclick="stake()">Stake</button>
+    </div>
+    <div>
+        <button onclick="withdraw()">Withdraw</button>
+    </div>
+    <script>
+        const { PublicKey, Connection, clusterApiUrl } = solanaWeb3;
+        const { Provider, web3, Program } = anchor;
+        const { SystemProgram } = web3;
+
+        const connection = new Connection(clusterApiUrl('devnet'), 'confirmed');
+
+        const programID = new PublicKey('YOUR_PROGRAM_ID');
+        const provider = Provider.local();
+        anchor.setProvider(provider);
+
+        const idl = JSON.parse(await (await fetch('idl.json')).text());
+        const program = new Program(idl, programID);
+
+        let userWallet;
+
+        async function stake() {
+            const stakeAmount = document.getElementById('stakeAmount').value;
+            if (stakeAmount <= 0) return alert('Invalid amount');
+
+            await connectWallet();
+
+            const userTokenAccount = await getTokenAccount();
+            const poolTokenAccount = await getPoolTokenAccount();
+
+            await program.rpc.stake(new anchor.BN(stakeAmount), {
+                accounts: {
+                    state: state.publicKey,
+                    userStake: userTokenAccount.publicKey,
+                    userTokenAccount: userTokenAccount.publicKey,
+                    poolTokenAccount: poolTokenAccount.publicKey,
+                    authority: provider.wallet.publicKey,
+                    tokenProgram: TOKEN_PROGRAM_ID,
+                },
+            });
+
+            alert('Staked successfully!');
+        }
+
+        async function withdraw() {
+            await connectWallet();
+
+            const userTokenAccount = await getTokenAccount();
+            const poolTokenAccount = await getPoolTokenAccount();
+
+            await program.rpc.withdraw({
+                accounts: {
+                    state: state.publicKey,
+                    userStake: userTokenAccount.publicKey,
+                    userTokenAccount: userTokenAccount.publicKey,
+                    poolTokenAccount: poolTokenAccount.publicKey,
+                    authority: provider.wallet.publicKey,
+                    tokenProgram: TOKEN_PROGRAM_ID,
+                },
+            });
+
+            alert('Withdrawn successfully!');
+        }
+
+        async function connectWallet() {
+            userWallet = await solana.connect();
+            provider.wallet = new anchor.Wallet(userWallet);
+            console.log('Connected to wallet:', provider.wallet.publicKey.toString());
+        }
+
+        async function getTokenAccount() {
+            // Implement logic to get the user's token account
+        }
+
+        async function getPoolTokenAccount() {
+            // Implement logic to get the pool's token account
+        }
+    </script>
+</body>
+</html>
